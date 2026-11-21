@@ -1,0 +1,38 @@
+name: Build Docker Image
+
+on:
+  push:
+    branches:
+      - "**"
+    tags:
+      - "v*"
+  pull_request:
+
+concurrency:
+  group: docker-build-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build S13 Docker image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify runner prerequisites
+        run: |
+          set -euo pipefail
+          docker version
+
+      - name: Set image tag from commit
+        run: |
+          set -euo pipefail
+          commit_sha="$(git rev-parse HEAD)"
+          image_tag="${commit_sha: -4}"
+          printf 'IMAGE_TAG=%s\n' "$image_tag" >> "$GITHUB_ENV"
+
+      - name: Build Docker image
+        run: |
+          set -euo pipefail
+          docker build --pull --tag "s13-training-camps:${IMAGE_TAG}" .

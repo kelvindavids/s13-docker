@@ -6,14 +6,15 @@ on:
       - "**"
     tags:
       - "v*"
+  pull_request:
 
 concurrency:
-  group: s13-training-camps
-  cancel-in-progress: true
+  group: s13-training-camps-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
-  deploy:
-    name: Build and deploy S13
+  build:
+    name: Build S13 Docker image
     runs-on: [self-hosted, linux, ubuntu, docker, shell, backend]
     steps:
       - name: Checkout repository
@@ -32,10 +33,26 @@ jobs:
           printf 'IMAGE_TAG=%s\n' "$image_tag" >> "$GITHUB_ENV"
           echo "Building the S13 image with tag: $image_tag"
 
-      - name: Build fresh image
+      - name: Build Docker image
         run: |
           set -euo pipefail
           docker build --pull --tag "s13-training-camps:${IMAGE_TAG}" .
+
+  deploy:
+    name: Deploy S13
+    if: github.event_name == 'push'
+    needs: build
+    runs-on: [self-hosted, linux, ubuntu, docker, shell, backend]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set image tag from commit
+        run: |
+          set -euo pipefail
+          commit_sha="$(git rev-parse HEAD)"
+          image_tag="${commit_sha: -4}"
+          printf 'IMAGE_TAG=%s\n' "$image_tag" >> "$GITHUB_ENV"
 
       - name: Take down current application
         run: |
