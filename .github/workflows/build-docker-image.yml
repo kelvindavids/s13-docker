@@ -35,4 +35,19 @@ jobs:
       - name: Build Docker image
         run: |
           set -euo pipefail
-          docker build --pull --tag "s13-training-camps:${IMAGE_TAG}" .
+          docker build --pull --tag "devopseasylearning/s13-training-camps:${IMAGE_TAG}" .
+
+      - name: Log in to Docker Hub
+        if: github.event_name == 'push'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Push Docker image
+        if: github.event_name == 'push'
+        run: |
+          set -euo pipefail
+          docker tag "devopseasylearning/s13-training-camps:${IMAGE_TAG}" devopseasylearning/s13-training-camps:latest
+          docker push "devopseasylearning/s13-training-camps:${IMAGE_TAG}"
+          docker push devopseasylearning/s13-training-camps:latest
